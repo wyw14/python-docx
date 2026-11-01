@@ -36,6 +36,22 @@ class Describe_Relationship:
         rel = _Relationship(None, None, "target", None, external=True)
         assert rel.target_ref == "target"
 
+    def it_can_retarget_an_external_rel(self):
+        rel = _Relationship("rId3", "reltype", "old/target", None, external=True)
+
+        rel.target_ref = "https://example.com/new/target"
+
+        assert rel.rId == "rId3"
+        assert rel.is_external is True
+        assert rel.target_ref == "https://example.com/new/target"
+
+    def it_raises_on_target_ref_assignment_for_an_internal_rel(self):
+        part = Mock(name="part", partname=PackURI("/ppt/media/image1.png"))
+        rel = _Relationship(None, None, part, "/ppt/slides")
+
+        with pytest.raises(ValueError, match="external target mode"):
+            rel.target_ref = "https://example.com/new/target"
+
     def it_should_have_relative_ref_for_internal_rel(self):
         """
         Internal relationships (TargetMode == 'Internal' in the XML) should

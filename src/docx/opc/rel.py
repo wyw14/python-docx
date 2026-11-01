@@ -151,3 +151,18 @@ class _Relationship:
         else:
             target = cast("Part", self._target)
             return target.partname.relative_ref(self._baseURI)
+
+    @target_ref.setter
+    def target_ref(self, target_ref: str) -> None:
+        """Redirect this external relationship to `target_ref`.
+
+        Only the target of an external relationship can be reassigned this way; the
+        relationship Id (rId) is retained, so every part-XML element that references
+        it keeps working without any change. Internal relationships target parts and
+        cannot be retargeted in place.
+        """
+        if not self._is_external:
+            raise ValueError(
+                "target_ref can only be assigned on a relationship with external target mode"
+            )
+        self._target = target_ref

@@ -10,6 +10,7 @@ from typing import IO, TYPE_CHECKING, Iterator, List, Sequence
 from docx.blkcntnr import BlockItemContainer
 from docx.enum.section import WD_SECTION
 from docx.enum.text import WD_BREAK
+from docx.hyperlink import absolutize_hyperlinks as _absolutize_hyperlinks
 from docx.section import Section, Sections
 from docx.shared import ElementProxy, Emu, Inches, Length
 from docx.text.run import Run
@@ -17,6 +18,7 @@ from docx.text.run import Run
 if TYPE_CHECKING:
     import docx.types as t
     from docx.comments import Comment, Comments
+    from docx.hyperlink import AbsolutizeHyperlinksResult
     from docx.oxml.document import CT_Body, CT_Document
     from docx.parts.document import DocumentPart
     from docx.settings import Settings
@@ -156,6 +158,41 @@ class Document(ElementProxy):
         table = self._body.add_table(rows, cols, self._block_width)
         table.style = style
         return table
+
+    def absolutize_hyperlinks(
+        self, base_uri: str, dry_run: bool = False
+    ) -> AbsolutizeHyperlinksResult:
+        """Rewrite relative external hyperlink targets as absolute URIs.
+
+        Walks the external hyperlink relationships of every part in the package --
+        the main document body, headers and footers, and all other parts -- and
+        resolves each *relative* target against the absolute `base_uri` according
+        to the normal URI rules (RFC 3986), preserving query parameters,
+        percent-encoded octets and fragments. Pass the location the document is
+        (or will be) stored at, e.g. ``"https://example.com/docs/report.docx"`` or
+        ``"file:///C:/docs/report.docx"``; this is the location relative links are
+        interpreted from.
+
+        Hyperlinks that already have an absolute address (including schemes other
+        than the base scheme), internal bookmark links and field-code (``HYPERLINK``)
+        links are left unchanged. Because only relationship targets are rewritten,
+        relationship Ids, visible link text and run formatting are all preserved,
+        and a relationship shared by several hyperlinks is rewritten only once.
+
+        `base_uri` must be an absolute ``http``, ``https`` or ``file`` URI; an
+        invalid base raises |ValueError| (or |TypeError| when it is not a string)
+        before any modification is made. Targets that cannot be resolved are
+        reported in the returned object's ``.skipped`` sequence rather than
+        raising. Neither the network nor any target file is accessed.
+
+        Set `dry_run` to |True| to report the changes (``.changes``: part,
+        relationship Id, original and proposed absolute URI) without modifying the
+        document. The same object is returned by a real run after the rewrites have
+        been applied. Rewritten addresses persist through save and reopen.
+        """
+        package = self._part.package
+        assert package is not None
+        return _absolutize_hyperlinks(package, base_uri, dry_run)
 
     @property
     def comments(self) -> Comments:
