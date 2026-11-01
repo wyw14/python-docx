@@ -9,6 +9,7 @@ from typing import cast
 
 import pytest
 
+from docx.bookmark import HyperlinkBookmarkCheck, HyperlinkBookmarkStatus
 from docx.comments import Comment, Comments
 from docx.document import Document, _Body
 from docx.enum.section import WD_SECTION
@@ -206,6 +207,34 @@ class DescribeDocument:
         document = Document(cast(CT_Document, element("w:document")), document_part_)
 
         assert document.inline_shapes is inline_shapes_
+
+    def it_reports_bookmark_target_status_of_each_internal_hyperlink(self, document_part_: Mock):
+        document_cxml = (
+            "w:document/w:body/("
+            'w:p/w:hyperlink{w:anchor=unique_name}/w:r/w:t"good link",'
+            'w:p/w:hyperlink{w:anchor=no_such_name}/w:r/w:t"missing link",'
+            "w:p/("
+            "w:bookmarkStart{w:id=0,w:name=unique_name},"
+            "w:bookmarkStart{w:id=1,w:name=twin},"
+            "w:bookmarkStart{w:id=2,w:name=twin}),"
+            'w:p/w:hyperlink{w:anchor=twin}/w:r/w:t"ambiguous link",'
+            'w:p/w:hyperlink{r:id=rId9,w:anchor=unique_name}/w:r/w:t"external link",'
+            'w:p/w:hyperlink/w:r/w:t"anchorless link",'
+            'w:tbl/w:tr/w:tc/w:p/w:hyperlink{w:anchor=no_such_name}/w:r/w:t"cell link"'
+            ")"
+        )
+        document = Document(cast(CT_Document, element(document_cxml)), document_part_)
+
+        checks = document.check_internal_hyperlinks()
+
+        assert checks == (
+            HyperlinkBookmarkCheck("good link", "unique_name", HyperlinkBookmarkStatus.UNIQUE, 1),
+            HyperlinkBookmarkCheck(
+                "missing link", "no_such_name", HyperlinkBookmarkStatus.MISSING, 0
+            ),
+            HyperlinkBookmarkCheck("ambiguous link", "twin", HyperlinkBookmarkStatus.DUPLICATE, 2),
+            HyperlinkBookmarkCheck("cell link", "no_such_name", HyperlinkBookmarkStatus.MISSING, 0),
+        )
 
     def it_can_iterate_the_inner_content_of_the_document(
         self, body_prop_: Mock, body_: Mock, document_part_: Mock

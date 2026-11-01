@@ -62,6 +62,13 @@ register_element_cls("wp:extent", CT_PositiveSize2D)
 register_element_cls("wp:inline", CT_Inline)
 
 # ---------------------------------------------------------------------------
+# bookmark-related elements
+
+from .bookmark import CT_BookmarkStart
+
+register_element_cls("w:bookmarkStart", CT_BookmarkStart)
+
+# ---------------------------------------------------------------------------
 # hyperlink-related elements
 
 register_element_cls("w:hyperlink", CT_Hyperlink)

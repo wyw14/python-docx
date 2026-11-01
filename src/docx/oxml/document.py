@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, List
+from typing import TYPE_CHECKING, Callable, Dict, Iterable, Iterator, List, cast
 
 from docx.oxml.section import CT_SectPr
+from docx.oxml.table import CT_Tbl
+from docx.oxml.text.hyperlink import CT_Hyperlink
+from docx.oxml.text.paragraph import CT_P
 from docx.oxml.xmlchemy import BaseOxmlElement, ZeroOrMore, ZeroOrOne
 
 if TYPE_CHECKING:
-    from docx.oxml.table import CT_Tbl
-    from docx.oxml.text.paragraph import CT_P
+    from docx.oxml.bookmark import CT_BookmarkStart
 
 
 class CT_Document(BaseOxmlElement):
@@ -79,6 +81,21 @@ class CT_Body(BaseOxmlElement):
             self.remove(content_elm)
 
     @property
+    def bookmark_name_counts(self) -> Dict[str, int]:
+        """Mapping of each bookmark name to its number of occurrences in this body.
+
+        Counts every `<w:bookmarkStart>` descendant of the body, including those
+        nested in table cells, in document order. A name maps to 1 for an ordinary
+        bookmark and to a value greater than 1 when bookmark names are duplicated.
+        Names without a bookmark start simply do not appear in the mapping.
+        """
+        bookmark_starts = cast("list[CT_BookmarkStart]", self.xpath(".//w:bookmarkStart"))
+        counts: Dict[str, int] = {}
+        for bookmarkStart in bookmark_starts:
+            counts[bookmarkStart.name] = counts.get(bookmarkStart.name, 0) + 1
+        return counts
+
+    @property
     def inner_content_elements(self) -> List[CT_P | CT_Tbl]:
         """Generate all `w:p` and `w:tbl` elements in this document-body.
 
@@ -86,3 +103,31 @@ class CT_Body(BaseOxmlElement):
         other "wrapper" element will not be included.
         """
         return self.xpath("./w:p | ./w:tbl")
+
+    def iter_hyperlink_elements(self) -> Iterator[CT_Hyperlink]:
+        """Generate each `<w:hyperlink>` in this body in document order.
+
+        Hyperlinks in body paragraphs are generated first, along with those inside
+        tables, including tables nested in cells to any depth. The physical XML
+        structure is walked, so each `<w:tc>` element is visited exactly once,
+        including horizontally-merged (`w:gridSpan`) and vertically-merged
+        continuation (`w:vMerge="continue"`) cells; layout-grid cell proxies that
+        repeat the same cell reference are deliberately not used.
+
+        Only hyperlinks that are direct children of a `<w:p>` are generated. Links
+        produced by Word field codes (`w:fldSimple` or `HYPERLINK` instrText) are not
+        `<w:hyperlink>` elements and so are not generated.
+        """
+
+        def iter_in_blocks(blocks: Iterable[CT_P | CT_Tbl]) -> Iterator[CT_Hyperlink]:
+            for block in blocks:
+                if isinstance(block, CT_P):
+                    yield from block.hyperlink_lst
+                else:
+                    # -- a CT_Tbl: walk each physical row/cell once, recursing into
+                    # -- paragraphs and nested tables within the cell in document order --
+                    for tr in block.tr_lst:
+                        for tc in tr.tc_lst:
+                            yield from iter_in_blocks(tc.inner_content_elements)
+
+        yield from iter_in_blocks(self.inner_content_elements)
