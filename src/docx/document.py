@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from docx.comments import Comment, Comments
     from docx.oxml.document import CT_Body, CT_Document
     from docx.parts.document import DocumentPart
+    from docx.reference import ImageReferences
     from docx.settings import Settings
     from docx.styles.style import ParagraphStyle, _TableStyle
     from docx.table import Table
@@ -166,6 +167,19 @@ class Document(ElementProxy):
     def core_properties(self):
         """A |CoreProperties| object providing Dublin Core properties of document."""
         return self._part.core_properties
+
+    @property
+    def image_references(self) -> ImageReferences:
+        """An |ImageReferences| object listing embedded inline pictures referenced by
+        this document.
+
+        References are grouped by image part, letting callers distinguish the number
+        of image parts from the number of times images appear in the document. The
+        inventory covers the document body (including tables and nested tables) and
+        the existing header and footer parts. Querying this collection does not change
+        the document.
+        """
+        return self._part.image_references
 
     @property
     def inline_shapes(self):

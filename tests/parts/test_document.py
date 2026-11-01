@@ -166,6 +166,18 @@ class DescribeDocumentPart:
         InlineShapes_.assert_called_once_with(body_elm, document_part)
         assert inline_shapes is InlineShapes_.return_value
 
+    def it_provides_access_to_the_embedded_image_references(
+        self, ImageReferences_: Mock, package_: Mock
+    ):
+        document_part = DocumentPart(
+            PackURI("/word/document.xml"), CT.WML_DOCUMENT, element("w:document"), package_
+        )
+
+        image_references = document_part.image_references
+
+        ImageReferences_.assert_called_once_with(document_part)
+        assert image_references is ImageReferences_.return_value
+
     def it_provides_access_to_the_numbering_part(
         self, part_related_by_: Mock, numbering_part_: Mock, package_: Mock
     ):
@@ -367,6 +379,10 @@ class DescribeDocumentPart:
     @pytest.fixture
     def header_part_(self, request: FixtureRequest):
         return instance_mock(request, HeaderPart)
+
+    @pytest.fixture
+    def ImageReferences_(self, request: FixtureRequest):
+        return class_mock(request, "docx.parts.document.ImageReferences")
 
     @pytest.fixture
     def InlineShapes_(self, request: FixtureRequest):

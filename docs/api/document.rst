@@ -21,6 +21,32 @@ The main Document and related objects.
    :exclude-members: styles_part
 
 
+|ImageReferences| objects
+--------------------------
+
+|ImageReferences| is the collection returned by :attr:`Document.image_references`.
+It inventories the embedded inline pictures referenced by the document body
+(including pictures in tables and nested tables) and by the existing header and
+footer parts, grouping the references by image part. This distinguishes the
+number of distinct image parts from the number of times images actually appear
+in the document.
+
+Each group identifies an image part by partname and content type and records
+every occurrence of that image as the partname of the story part containing it
+and the 1-based occurrence index within that story part. Externally-linked
+pictures are not included and chart and SmartArt graphics are not pictures.
+Querying the collection never changes the document.
+
+.. autoclass:: docx.reference.ImageReferences()
+   :members:
+
+.. autoclass:: docx.reference.ImageReferenceGroup()
+   :members:
+
+.. autoclass:: docx.reference.ImageReference()
+   :members:
+
+
 |CoreProperties| objects
 -------------------------
 

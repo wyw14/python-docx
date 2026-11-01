@@ -16,6 +16,7 @@ from docx.enum.text import WD_BREAK
 from docx.opc.coreprops import CoreProperties
 from docx.oxml.document import CT_Body, CT_Document
 from docx.parts.document import DocumentPart
+from docx.reference import ImageReferences
 from docx.section import Section, Sections
 from docx.settings import Settings
 from docx.shape import InlineShape, InlineShapes
@@ -207,6 +208,14 @@ class DescribeDocument:
 
         assert document.inline_shapes is inline_shapes_
 
+    def it_provides_access_to_its_image_references(
+        self, document_part_: Mock, image_references_: Mock
+    ):
+        document_part_.image_references = image_references_
+        document = Document(cast(CT_Document, element("w:document")), document_part_)
+
+        assert document.image_references is image_references_
+
     def it_can_iterate_the_inner_content_of_the_document(
         self, body_prop_: Mock, body_: Mock, document_part_: Mock
     ):
@@ -336,6 +345,10 @@ class DescribeDocument:
     @pytest.fixture
     def inline_shapes_(self, request: FixtureRequest):
         return instance_mock(request, InlineShapes)
+
+    @pytest.fixture
+    def image_references_(self, request: FixtureRequest):
+        return instance_mock(request, ImageReferences)
 
     @pytest.fixture
     def paragraph_(self, request: FixtureRequest):

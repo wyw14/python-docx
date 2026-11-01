@@ -12,6 +12,7 @@ from docx.parts.numbering import NumberingPart
 from docx.parts.settings import SettingsPart
 from docx.parts.story import StoryPart
 from docx.parts.styles import StylesPart
+from docx.reference import ImageReferences
 from docx.shape import InlineShapes
 from docx.shared import lazyproperty
 
@@ -89,6 +90,17 @@ class DocumentPart(StoryPart):
     def header_part(self, rId: str):
         """Return |HeaderPart| related by `rId`."""
         return self.related_parts[rId]
+
+    @lazyproperty
+    def image_references(self) -> ImageReferences:
+        """|ImageReferences| inventorying the embedded inline pictures referenced by
+        this document.
+
+        Groups references by image part across the document body and the existing
+        header and footer parts. The inventory is computed read-only; querying it
+        does not alter the package.
+        """
+        return ImageReferences(self)
 
     @lazyproperty
     def inline_shapes(self):
